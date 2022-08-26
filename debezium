@@ -88,3 +88,74 @@ docker run -d \
   -e SCHEMA_REGISTRY_LISTENERS=http://192.168.0.11:8081 \
   -e SCHEMA_REGISTRY_DEBUG=true \
   confluentinc/cp-schema-registry:7.2.1
+  
+  
+  
+  
+    <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>1.11.1</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                            <goal>idl-protocol</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.basedir}/src/main/confAvro/</sourceDirectory>
+                            <outputDirectory>${project.basedir}/src/main/java/</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+                <version>7.2.1</version>
+                <configuration>
+                    <schemaRegistryUrls>
+                        <param>http://192.168.0.11:8081</param>
+                    </schemaRegistryUrls>
+                    <subjects>
+                        <fullfillment.inventory.customers-value>src/main/confAvro/fullfillment.inventory.customers-value.avsc</fullfillment.inventory.customers-value>
+                        <fullfillment.inventory.customers-key>src/main/confAvro/fullfillment.inventory.customers-key.avsc</fullfillment.inventory.customers-key>
+                    </subjects>
+                    <schemaTypes>
+                        <fullfillment.inventory.customers-value>AVRO</fullfillment.inventory.customers-value>
+                        <fullfillment.inventory.customers-key>AVRO</fullfillment.inventory.customers-key>
+                    </schemaTypes>
+                    <outputDirectory>src/main/confAvro</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>register</id>
+                        <goals>
+                            <goal>register</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>avro-resources</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>download</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>src/main/confAvro</outputDirectory>
+                            <subjectPatterns>
+                                <param>^fullfillment.inventory.customers-(key|value)$</param>
+                            </subjectPatterns>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
