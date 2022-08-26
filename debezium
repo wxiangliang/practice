@@ -1,0 +1,90 @@
+Properties props = new Properties();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "192.168.0.11:9092");
+        //序列化key
+//        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, AvroConverter.class.getName());
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
+        //序列化value confluent
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
+        props.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://192.168.0.11:8081");
+        props.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, false);
+
+//        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,AvroKafkaDeserializer.class.getName());
+   /*     props.putIfAbsent(SerdeConfig.REGISTRY_URL, "http://192.168.0.11:8080/apis/registry/v2");
+        props.put(AvroKafkaSerdeConfig.USE_SPECIFIC_AVRO_READER, false);*/
+//        props.put("schema.registry.url","http://192.168.0.11:8080/apis/registry/v2");
+
+        // 分组
+        props.put(ConsumerConfig.GROUP_ID_CONFIG,"debezium_001");
+        //自动提交间隔时间
+//        props.put("auto.commit.interval.ms", "1000");
+        // 自动offset
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,false);
+
+        KafkaConsumer<Key, Envelope> consumer = new KafkaConsumer<>(props);
+
+        consumer.subscribe(Pattern.compile( "fullfillment.inventory.*"));
+
+        try{
+            while (true) {
+                ConsumerRecords<Key, Envelope> records = consumer.poll(Duration.ofSeconds(100));
+                for(ConsumerRecord<Key, Envelope> record : records) {
+                  /*  GenericRecord keyInfo=record.key();*/
+//                    System.out.println(record.key().getId());
+//                    System.out.println(String.format("topic = %s, offset= %s ,key= %s, value= %s",str.topic(),str.offset(), str.key(), str.value()));
+                }
+                //手动提交offset
+                consumer.commitAsync();
+            }
+        }finally {
+            consumer.close();
+        }
+
+
+
+
+
+
+name=inventory-connector
+connector.class=io.debezium.connector.mysql.MySqlConnector
+database.hostname=192.168.0.11
+database.port=3306
+database.user=debezium
+database.password=!QAZ2wsx
+database.server.id=11111
+database.server.name=fullfillment
+database.include.list=inventory
+database.history.kafka.bootstrap.servers=192.168.0.11:9092
+database.history.kafka.topic=dbhistory.fullfillment
+include.schema.changes=true
+
+key.converter=io.confluent.connect.avro.AvroConverter
+key.converter.schema.registry.url=http://192.168.0.11:8081
+value.converter=io.confluent.connect.avro.AvroConverter
+value.converter.schema.registry.url=http://192.168.0.11:8081
+value.converter.auto.register.schemas=false
+key.converter.auto.register.schemas=false
+
+
+
+
+
+
+key.converter=io.apicurio.registry.utils.converter.AvroConverter
+key.converter.apicurio.registry.url=http://192.168.0.11:8080/apis/registry/v2
+key.converter.apicurio.registry.auto-register=true
+key.converter.apicurio.registry.find-latest=true
+value.converter=io.apicurio.registry.utils.converter.AvroConverter
+value.converter.apicurio.registry.url=http://192.168.0.11:8080/apis/registry/v2
+value.converter.apicurio.registry.auto-register=true
+value.converter.apicurio.registry.find-latest=true
+
+
+
+docker run -d \
+  --net=host \
+  --name=schema-registry \
+  -e SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://192.168.0.11:9092 \
+  -e SCHEMA_REGISTRY_HOST_NAME=192.168.0.11 \
+  -e SCHEMA_REGISTRY_LISTENERS=http://192.168.0.11:8081 \
+  -e SCHEMA_REGISTRY_DEBUG=true \
+  confluentinc/cp-schema-registry:7.2.1
